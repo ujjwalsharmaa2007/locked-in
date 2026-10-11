@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Locked In</title>
+<meta name="description" content="A student study app: real focus timer, PYQ shelf, PDF tools and an engineering doubt desk.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@600;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+</head>
+<body class="loading">
+<main class="auth" id="auth">
+  <div class="auth-inner">
+    <div class="wordmark"><i></i>locked in</div>
+    <h1 class="auth-h">Study like you <mark>mean it.</mark></h1>
+    <p class="lede" style="margin-top:0">A focus timer that only counts real minutes, a shelf for your PYQs, PDF tools, and a doubt desk for engineering subjects. Made for students.</p>
+    <div class="card stack auth-card">
+      <div class="chips" id="auth-tabs"><button class="chip" data-m="signup" aria-pressed="true">Sign up</button><button class="chip" data-m="login" aria-pressed="false">Log in</button></div>
+      <form id="auth-form" class="stack" novalidate>
+        <div class="field"><label for="auth-email">Email</label><input type="email" id="auth-email" autocomplete="email" inputmode="email" placeholder="you@college.edu"></div>
+        <div class="field"><label for="auth-pass" id="auth-pass-label">Password (8+ characters)</label><input type="password" id="auth-pass" autocomplete="new-password"></div>
+        <button class="btn primary" id="auth-submit" type="submit">Create account</button>
+      </form>
+      <div><button class="btn sm" id="auth-forgot" type="button" hidden>Forgot password?</button></div>
+      <p class="status" id="auth-msg" role="status"></p>
+      <p class="note-warn" id="auth-setup" hidden>Setup needed: add your Supabase URL and anon key in config.js. The README has the steps.</p>
+    </div>
+    <p class="muted small">We store your sessions, shelf links and settings in your account. Nothing else.</p>
+    <footer class="credit"><span>Made with <svg width="16" height="16" viewBox="0 0 24 24" style="fill:var(--pop)" stroke="currentColor" stroke-width="2" stroke-linejoin="round" role="img" aria-label="love"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.5 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg> by Ujjwal</span><a href="https://www.linkedin.com/in/ujjwal-sharma-60a58734a" target="_blank" rel="noopener">LinkedIn</a><a href="https://github.com/ujjwalsharmaa2007" target="_blank" rel="noopener">GitHub</a></footer>
+  </div>
+</main>
+<div class="wrap">
+  <div class="top">
+    <div class="wordmark"><i></i>locked in</div>
+    <button class="btn sm iconbtn" id="open-settings" aria-label="Customize">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>
+      Customize
+    </button>
+  </div>
+
+  <!-- HOME -->
+  <section class="pane" id="pane-home">
+    <div class="hero">
+      <h1 id="greet">yo, <mark>you</mark></h1>
+      <p class="lede" id="hero-sub">Start a session. The timer only counts the minutes you actually answer for.</p>
+    </div>
+
+    <div class="gamebar">
+      <div class="stat lvl"><span class="label">Level</span><b id="lvl-name">Backbencher</b><div class="xpbar"><i id="xp-bar"></i></div><span class="small" id="xp-text"></span></div>
+      <div class="stat str"><span class="label">Streak</span><b><span id="streak-n">0</span> <span class="small" style="font-family:var(--body);font-weight:700">days</span></b><span class="small">20+ focused min counts</span></div>
+      <div class="stat tot"><span class="label">All time</span><b id="total-h">0h</b><span class="small muted">focused</span></div>
+    </div>
+
+    <div class="grid2" style="margin-top:var(--gap)">
+      <div class="card stack" id="timer-card">
+        <div class="row">
+          <div class="field" style="flex:2 1 180px"><label for="subject">Subject</label><input type="text" id="subject" list="subjects" placeholder="DBMS, Maths-3, CN..." autocomplete="off"></div>
+          <div class="field" style="flex:1 1 120px"><label for="interval">Check in every</label>
+            <select id="interval"><option value="5">5 min</option><option value="10" selected>10 min</option><option value="15">15 min</option><option value="25">25 min</option></select></div>
+        </div>
+        <datalist id="subjects"></datalist>
+        <div>
+          <p class="phase" id="phase">Ready</p>
+          <div class="clock" id="clock"><span>00:00:00</span></div>
+        </div>
+        <div class="banner" id="banner" hidden>
+          <span><b>Still locked in?</b> <span id="ask-left"></span></span>
+          <button class="btn sm" id="btn-confirm">Yep, still here</button>
+        </div>
+        <div class="trio">
+          <div><span class="label">Sitting</span><b id="t-wall">0:00</b></div>
+          <div><span class="label">Off task</span><b id="t-off">0:00</b></div>
+          <div><span class="label">Focus rate</span><b id="t-rate">--</b></div>
+        </div>
+        <p class="note-warn" id="auto-note" hidden>Paused because a check-in went unanswered. That last block did not count.</p>
+        <div class="row" id="controls">
+          <button class="btn primary" id="btn-start">Lock in</button>
+          <button class="btn" id="btn-pause" hidden>Pause</button>
+          <button class="btn primary" id="btn-resume" hidden>Resume</button>
+          <button class="btn" id="btn-stop" hidden>Finish session</button>
+        </div>
+        <div class="stack" id="wrapup" hidden>
+          <p class="summary-sentence" id="wrap-sentence"></p>
+          <div class="row">
+            <div class="field" style="max-width:270px"><label for="claimed">How long do you feel you studied? (min)</label><input type="number" id="claimed" min="0" step="1"></div>
+            <button class="btn primary" id="btn-save">Save session</button>
+            <button class="btn" id="btn-discard">Discard</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="stack">
+        <div class="card stack">
+          <div class="row" style="justify-content:space-between;align-items:end">
+            <div><span class="label">Today</span><h2 id="today-focus" style="margin-top:6px">0m focused</h2></div>
+            <div class="field" style="flex:0 0 120px"><label for="goal">Goal (hours)</label><input type="number" id="goal" min="0.5" max="16" step="0.5" value="4"></div>
+          </div>
+          <div class="bar" aria-hidden="true"><i id="goal-bar"></i></div>
+          <p class="muted small" id="goal-text"></p>
+        </div>
+        <div class="card stack">
+          <div class="row" style="justify-content:space-between;align-items:baseline"><h3>Last 7 days</h3><span class="muted small" id="week-scale"></span></div>
+          <div class="week" id="week"></div>
+          <div class="weeklabels" id="weeklabels"></div>
+          <div class="legend"><span><i class="l1"></i>Time you sat down</span><span><i class="l2"></i>Time you focused</span></div>
+          <p id="insight" class="muted small"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card stack" style="margin-top:var(--gap)">
+      <h3>Stickers</h3>
+      <div class="badges" id="badges"></div>
+    </div>
+    <div class="card" style="margin-top:var(--gap)">
+      <h3 style="margin-bottom:6px">Recent sessions</h3>
+      <div class="list" id="sessions"></div>
+    </div>
+  </section>
+
+  <!-- SHELF -->
+  <section class="pane" id="pane-shelf" hidden>
+    <div class="pane-head">
+      <h2>The shelf</h2>
+      <p>Save the link to every PYQ, note and slide deck once, with subject and year. Then search instead of scrolling through chats.</p>
+    </div>
+    <div class="card stack">
+      <div class="row">
+        <div class="field"><label for="lib-subject">Subject</label><input type="text" id="lib-subject" list="subjects" placeholder="Operating Systems" autocomplete="off"></div>
+        <div class="field" style="flex:0 1 150px"><label for="lib-cat">Type</label>
+          <select id="lib-cat"><option>PYQ</option><option>Notes</option><option>Assignment</option><option>Syllabus</option><option>Other</option></select></div>
+        <div class="field" style="flex:0 1 110px"><label for="lib-year">Year</label><input type="text" id="lib-year" placeholder="2024" inputmode="numeric"></div>
+        <div class="field"><label for="lib-tags">Tags</label><input type="text" id="lib-tags" placeholder="unit 3, important"></div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1 1 180px"><label for="lib-linkname">Name</label><input type="text" id="lib-linkname" placeholder="OS PYQ 2024"></div>
+        <div class="field" style="flex:2 1 240px"><label for="lib-url">Link (Drive, OneDrive, Telegram, anything)</label><input type="url" id="lib-url" placeholder="https://drive.google.com/..."></div>
+        <button class="btn primary" id="lib-addlink">Add to shelf</button>
+      </div>
+      <p class="status" id="lib-status" role="status"></p>
+    </div>
+    <div class="stack" style="margin-top:20px">
+      <div class="row">
+        <div class="field" style="flex:2 1 220px"><label for="lib-search">Search</label><input type="search" id="lib-search" placeholder="Name, subject, year or tag"></div>
+        <div class="field" style="flex:1 1 180px"><label for="lib-subjfilter">Subject</label><select id="lib-subjfilter"><option value="">All subjects</option></select></div>
+      </div>
+      <div class="chips" id="lib-cats"></div>
+      <div class="items" id="lib-items"></div>
+    </div>
+  </section>
+
+  <!-- SQUAD -->
+  <section class="pane" id="pane-squad" hidden>
+    <div class="pane-head">
+      <h2>Squad board</h2>
+      <p>This week's focused hours for everyone who joined. Friends see only your nickname, hours, streak and level. Never your subjects or links.</p>
+    </div>
+    <div class="card">
+      <div id="squad-list"></div>
+    </div>
+  </section>
+
+  <!-- PDF TOOLS -->
+  <section class="pane" id="pane-pdf" hidden>
+    <div class="pane-head">
+      <h2>PDF tools</h2>
+      <p class="muted">Everything runs in your browser. Your files are not uploaded anywhere.</p>
+    </div>
+    <div class="chips tool-chips" id="tool-chips">
+      <button class="chip" data-tool="edit" aria-pressed="true">Edit text</button>
+      <button class="chip" data-tool="word" aria-pressed="false">PDF to Word</button>
+      <button class="chip" data-tool="img" aria-pressed="false">Images to PDF</button>
+      <button class="chip" data-tool="txt" aria-pressed="false">Text to PDF</button>
+      <button class="chip" data-tool="merge" aria-pressed="false">Merge</button>
+      <button class="chip" data-tool="extract" aria-pressed="false">Extract pages</button>
+    </div>
+    <p class="note-warn" id="lib-warn" hidden>The PDF libraries did not load. Check your connection and reload the page.</p>
+
+    <!-- edit -->
+    <div class="card stack tool" id="tool-edit">
+      <h3>Change a line in a PDF</h3>
+      <p class="muted small">Open a PDF, click the line you want to change, type the new text. To add a new line anywhere, press "Add new text" and click the page. New text uses Helvetica and supports English letters, numbers and common symbols.</p>
+      <input type="file" id="edit-file" accept="application/pdf,.pdf">
+      <div class="row" id="edit-nav" hidden>
+        <button class="btn sm" id="edit-prev">Previous</button>
+        <span id="edit-pageinfo" class="muted small"></span>
+        <button class="btn sm" id="edit-next">Next</button>
+        <button class="chip" id="edit-add" aria-pressed="false">Add new text</button>
+      </div>
+      <div class="pdfscroll" id="edit-scroll" hidden><div class="pdfwrap" id="edit-wrap"><canvas id="edit-canvas"></canvas><div class="layer" id="edit-layer"></div></div></div>
+      <div class="card stack" id="edit-panel" hidden style="background:var(--bg)">
+        <p class="small muted" id="edit-orig"></p>
+        <div class="row">
+          <div class="field" style="flex:3 1 240px"><label for="edit-text">Text</label><input type="text" id="edit-text" autocomplete="off"></div>
+          <div class="field" style="flex:0 1 100px" id="edit-size-field"><label for="edit-size">Size</label><input type="number" id="edit-size" min="6" max="72" step="1" value="12"></div>
+          <button class="btn primary" id="edit-apply">Apply</button>
+          <button class="btn" id="edit-cancel">Cancel</button>
+        </div>
+      </div>
+      <div id="edit-list" class="flist"></div>
+      <div class="row"><button class="btn primary" id="edit-save" disabled>Save edited PDF</button></div>
+      <p class="status" id="edit-status" role="status"></p>
+    </div>
+
+    <!-- word -->
+    <div class="card stack tool" id="tool-word" hidden>
+      <h3>PDF to Word</h3>
+      <p class="muted small">Pulls the text out of a PDF and makes an editable .docx. Headings and paragraphs are rebuilt as well as possible. Tables, images and columns are not kept, and scanned pages (photos of paper) have no text to extract.</p>
+      <input type="file" id="word-file" accept="application/pdf,.pdf">
+      <div class="row"><button class="btn primary" id="word-go" disabled>Convert to .docx</button></div>
+      <p class="status" id="word-status" role="status"></p>
+    </div>
+
+    <!-- images -->
+    <div class="card stack tool" id="tool-img" hidden>
+      <h3>Images to PDF</h3>
+      <p class="muted small">Pick photos of notes or assignments, put them in order, get one PDF.</p>
+      <input type="file" id="img-file" accept="image/*" multiple>
+      <div class="flist" id="img-list"></div>
+      <div class="row">
+        <div class="field" style="flex:0 1 220px"><label for="img-size">Page size</label><select id="img-size"><option value="a4">A4, image fitted</option><option value="match">Same size as image</option></select></div>
+        <button class="btn primary" id="img-go" disabled>Make PDF</button>
+      </div>
+      <p class="status" id="img-status" role="status"></p>
+    </div>
+
+    <!-- text -->
+    <div class="card stack tool" id="tool-txt" hidden>
+      <h3>Text to PDF</h3>
+      <p class="muted small">Type or paste text, get a clean A4 PDF. English letters, numbers and common symbols only.</p>
+      <div class="row">
+        <div class="field" style="flex:3 1 220px"><label for="txt-title">Title (optional)</label><input type="text" id="txt-title"></div>
+        <div class="field" style="flex:0 1 110px"><label for="txt-size">Font size</label><input type="number" id="txt-size" min="8" max="24" value="12"></div>
+      </div>
+      <textarea id="txt-body" style="min-height:200px" placeholder="Paste or type your text here"></textarea>
+      <div class="row"><button class="btn primary" id="txt-go">Make PDF</button></div>
+      <p class="status" id="txt-status" role="status"></p>
+    </div>
+
+    <!-- merge -->
+    <div class="card stack tool" id="tool-merge" hidden>
+      <h3>Merge PDFs</h3>
+      <p class="muted small">Add two or more PDFs, set the order, join them into one file.</p>
+      <input type="file" id="merge-file" accept="application/pdf,.pdf" multiple>
+      <div class="flist" id="merge-list"></div>
+      <div class="row"><button class="btn primary" id="merge-go" disabled>Merge</button></div>
+      <p class="status" id="merge-status" role="status"></p>
+    </div>
+
+    <!-- extract -->
+    <div class="card stack tool" id="tool-extract" hidden>
+      <h3>Extract pages</h3>
+      <p class="muted small">Keep only the pages you need, for example 1-3, 5, 8-10.</p>
+      <input type="file" id="ext-file" accept="application/pdf,.pdf">
+      <p class="muted small" id="ext-info"></p>
+      <div class="row">
+        <div class="field" style="flex:1 1 220px"><label for="ext-range">Pages</label><input type="text" id="ext-range" placeholder="1-3, 5"></div>
+        <button class="btn primary" id="ext-go" disabled>Extract</button>
+      </div>
+      <p class="status" id="ext-status" role="status"></p>
+    </div>
+  </section>
+
+  <!-- ASK -->
+  <section class="pane" id="pane-ask" hidden>
+    <div class="pane-head">
+      <h2>Doubt desk</h2>
+      <p>Pick your branch and subject, paste the question, choose the kind of answer you need. Built around Indian engineering syllabi and university exam patterns.</p>
+    </div>
+    <div class="grid2">
+      <div class="card stack">
+        <div class="row">
+          <div class="field"><label for="ask-branch">Branch</label><select id="ask-branch"><option value="">Choose branch</option></select></div>
+          <div class="field"><label for="ask-subject">Subject</label><input type="text" id="ask-subject" list="subjects" placeholder="Type or tap below" autocomplete="off"></div>
+        </div>
+        <div class="chips" id="ask-subjchips"></div>
+        <span class="label">What do you need?</span>
+        <div class="chips" id="ask-modes"></div>
+        <div class="row">
+          <div class="field" id="f-marks" style="flex:0 1 140px" hidden><label for="ask-marks">Marks</label><select id="ask-marks"><option>2</option><option selected>5</option><option>10</option><option>15</option></select></div>
+          <div class="field" id="f-lang" style="flex:0 1 160px" hidden><label for="ask-lang">Language</label><select id="ask-lang"><option>C</option><option>C++</option><option>Java</option><option>Python</option></select></div>
+        </div>
+        <div class="field"><label for="ask-q">Question, code or topic</label><textarea id="ask-q" style="min-height:150px" placeholder="e.g. Explain deadlock and the four necessary conditions"></textarea></div>
+        <div class="row"><button class="btn primary" id="ask-go">Ask</button><button class="btn" id="ask-stop" hidden>Stop</button></div>
+        <p class="status" id="ask-status" role="status"></p>
+        <p class="muted small">Free accounts get a few questions a day. The limit resets every 24 hours.</p>
+      </div>
+      <div class="card" style="min-height:200px">
+        <div class="answer" id="ask-out"><span class="muted">The answer will appear here.</span></div>
+      </div>
+    </div>
+  </section>
+  <footer class="credit"><span>Made with <svg width="16" height="16" viewBox="0 0 24 24" style="fill:var(--pop)" stroke="currentColor" stroke-width="2" stroke-linejoin="round" role="img" aria-label="love"><path d="M12 21s-7-4.6-9.3-9A5.3 5.3 0 0 1 12 6.5 5.3 5.3 0 0 1 21.3 12C19 16.4 12 21 12 21z"/></svg> by Ujjwal</span><a href="https://www.linkedin.com/in/ujjwal-sharma-60a58734a" target="_blank" rel="noopener">LinkedIn</a><a href="https://github.com/ujjwalsharmaa2007" target="_blank" rel="noopener">GitHub</a></footer>
+</div>
+
+<nav class="dock" id="dock" aria-label="Sections">
+  <button class="dk" data-tab="home" aria-selected="true" aria-label="Home"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7v9a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Home</span></button>
+  <button class="dk" data-tab="shelf" aria-selected="false" aria-label="Shelf"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg><span>Shelf</span></button>
+  <button class="dk" data-tab="pdf" aria-selected="false" aria-label="PDF tools"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/></svg><span>PDF</span></button>
+  <button class="dk" data-tab="ask" aria-selected="false" aria-label="Ask"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"/></svg><span>Ask</span></button>
+  <button class="dk" data-tab="squad" aria-selected="false" aria-label="Squad"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.5"/><path d="M17 14a5 5 0 0 1 5 6"/></svg><span>Squad</span></button>
+</nav>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="set-title">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2 id="set-title">Customize</h2>
+      <button class="btn sm" id="set-close">Done</button>
+    </div>
+    <p class="muted small" id="set-welcome" hidden>Pick a nickname and a look. You can change both anytime, and your choices follow your account.</p>
+    <div class="field"><label for="set-nick">Nickname</label><input type="text" id="set-nick" maxlength="24" placeholder="What should we call you?" autocomplete="off"></div>
+    <div class="stack">
+      <span class="label">Skin</span>
+      <div class="skins" id="skins"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:0 0 auto"><label for="set-accent">Main color</label><input type="color" id="set-accent" value="#6b4cff"></div>
+      <button class="btn sm" id="set-accent-reset">Use skin color</button>
+    </div>
+    <div class="row">
+      <div class="stack" style="flex:1 1 200px"><span class="label">Headings</span>
+        <div class="chips" id="set-font"><button class="chip" data-v="chunky" aria-pressed="true">Chunky</button><button class="chip" data-v="clean" aria-pressed="false">Clean</button></div></div>
+      <div class="stack" style="flex:1 1 200px"><span class="label">Spacing</span>
+        <div class="chips" id="set-density"><button class="chip" data-v="cozy" aria-pressed="true">Cozy</button><button class="chip" data-v="compact" aria-pressed="false">Compact</button></div></div>
+    </div>
+    <div class="stack">
+      <span class="label">Show these sections</span>
+      <label class="opt"><input type="checkbox" id="sec-shelf"> Shelf</label>
+      <label class="opt"><input type="checkbox" id="sec-pdf"> PDF tools</label>
+      <label class="opt"><input type="checkbox" id="sec-ask"> Ask</label>
+      <label class="opt"><input type="checkbox" id="sec-squad"> Squad board</label>
+    </div>
+    <label class="opt"><input type="checkbox" id="opt-squad"> Put me on the squad board (nickname, weekly hours, streak, level)</label>
+    <div class="stack">
+      <span class="label">Account</span>
+      <p class="small muted" id="acct-email"></p>
+      <div class="row"><button class="btn sm" id="btn-logout">Log out</button><button class="btn sm danger" id="btn-wipe">Delete my data</button></div>
+      <p class="status" id="acct-status" role="status"></p>
+    </div>
+    <div class="row"><button class="btn sm" id="set-reset">Reset my look</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
